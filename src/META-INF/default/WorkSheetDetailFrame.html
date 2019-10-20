@@ -1,0 +1,82 @@
+<html>
+<head>
+
+<title>工单浏览</title>
+
+<script type="text/javascript" src="/eaptag2/js/ccftag.zdialog.js" ></script>
+
+<script src="/eaptag2/js/ccftag.form.js" type="text/javascript"></script>
+<link rel="stylesheet" href="/eaptag2/css/ui.tabs2.css" type="text/css" />
+
+</head> 
+
+<script>
+var selectedTabId = "tab0";
+var taburl = {};
+var tasknames = {};
+var prevIdx = 0;
+function toggleTabStyle(tabId, idx) {
+	$("#" + selectedTabId).removeClass("ui-tabs-selected");
+	$("#" + tabId).addClass("ui-tabs-selected");
+	selectedTabId = tabId;
+	if ($("#DetailFrame_" + idx).attr('src')=="") {		
+		$("#DetailFrame_" + idx).attr('src', taburl[idx]);	
+	}
+	$("#worksheetTab-" + prevIdx).hide();
+	$("#worksheetTab-" + idx).show();
+	prevIdx = idx;
+}
+function selectTab(taskname) {
+	for(i=0; i<taskname.length; i++) {		
+		if (tasknames[i] == taskname) {
+			$("#tab"+(i)+" span").click();
+		}
+	} 
+}
+</script>
+
+<body style="margin:0px;" scroll=no> 
+	<DIV class="ui-tabs-nav" id="tabframe">
+	
+		<script>taburl[0] = "/jbpm/jsp/WorkSheetOuterFrame.jsp?module=$module&processName=$processName&TASK_NAME=$currentTask.TASK_NAME&INST_ID=$currentTask.INST_ID&TASK_ID=$currentTask.TASK_ID&readonly=${readonly}&history=$history&BIZ_ID=$currentTask.BIZ_ID&view=$view&dueTime=$dueTime";</script>
+		
+		<li id="tab0" class="ui-tabs-selected"><a href="javascript:toggleTabStyle('tab0', 0)"><span> $processName </span></a></li>
+
+		<script>taburl[1] = "/$module/jbpm/ProcessedInfoDetail.html?processName=$processName&INST_ID=$INST_ID&history=$history";</script>
+	
+		<li id="tab1"><a href="javascript:toggleTabStyle('tab1', 1)"><span> 处理过程 </span></a></li>
+
+		<script>taburl[2] = "/$module/jbpm/FlowChart.html?processName=$processName&INST_ID=$INST_ID&TASK_ID=$TASK_ID&history=$history";</script>
+		
+		<li id="tab2"><a href="javascript:toggleTabStyle('tab2', 2)"><span> 流程图 </span></a></li>	
+	
+	</div>
+		
+	<div class="cline1" id="tabFrame" style="padding-top:4px; height:100%; width:100% ">
+	
+		<div id="worksheetTab-0" class="ui-tabs-selected" style='display:block;'>			
+			<iframe src="" width="100%" height="100%" id="DetailFrame_0" frameborder="0"></iframe>
+		</div>
+		
+		<div id="worksheetTab-1" class="ui-tabs-selected" style='display:block;'>			
+			<iframe src="" width="100%" height="100%" id="DetailFrame_1" frameborder="0"></iframe>
+		</div>
+		
+		<div id="worksheetTab-2" class="ui-tabs-selected" style='display:none;'>			
+			<iframe src="" width="100%" height="100%" id="DetailFrame_2" frameborder="0"></iframe>
+		</div>
+		
+	</div>
+	
+	<script type="text/javascript">
+   		$(document).ready(function(){ 
+   			tabFrame.style.height = document.body.clientHeight - 26;
+   			tabFrame.style.width = document.body.clientWidth - 0;
+   			$("#DetailFrame_0").attr('src', taburl[0]);	
+   		});
+   	</script>
+	
+
+</body>
+
+</html>

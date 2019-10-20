@@ -1,0 +1,564 @@
+<html>
+<head>
+     <title>工单查询模板</title>     
+     <meta http-equiv="Content-Type" content="text/html; charset=GBK" />
+</head>
+
+<script type="text/javascript" src="/eaptag2/js/ccftag.zdialog.js"></script>
+<script type="text/javascript" src="/eaptag2/js/ccftag.form.js"></script>
+<script type="text/javascript" src="/eaptag2/js/ccftag.datepick.js"></script>
+<script type="text/javascript" src="/eaptag2/js/ccftag.textbox.js"></script>
+
+
+<script>
+
+var ajax = new ccftag_ajax("/$module/ccftag");
+
+var datasourceName = "${dataSource}";
+
+var dlg;
+
+//----------------------------------------------------------------------------------
+// 选择单元格时的处理方法
+//----------------------------------------------------------------------------------
+var currentRow = null;
+
+function rowSelected(value, record , cell, grid, colNO, rowNO) {
+	currentRow = record;
+}
+
+function cellDblClick(value, record , cell, row, colNO, rowNO, columnObj, grid) {
+	currentRow = record;
+	openProcessWin(); 
+}
+
+function openProcessWin() {
+	//rows = mygrid.getSelectedRecords()
+	if (currentRow == null) { alert("请选择浏览工单记录"); return;}
+	
+	var loc = "/$module/jbpm/WorkSheetDetailFrame.html?INST_ID=" + currentRow.INST_ID +
+    		"&processName=" + currentRow.PROC_NAME + "&TASK_ID=" + currentRow.TASK_ID + "&BIZ_ID=" + currentRow.BIZ_ID +
+    		"&TASK_NAME=" + currentRow.TASK_NAME + "&dueTime=" + currentRow.DUE_TIME2 + 
+    		"&history=$history";
+	if (currentRow.READ_FLAG != "$ccflag")
+		loc = loc + "&actor=$actor";
+		
+	if (parent && parent.toPage)
+		parent.toPage(loc, "浏览工单:" + currentRow.BIZ_ID + ":" + currentRow.INST_TITLE);
+	else {
+		var w = window.screen.width * 0.8;
+		var h = window.screen.height-220;
+		var sStyle = "width="+w+"px,height="+h+"px,left=" + window.screen.width*0.1 + "px,top=100px,scrollbars=yes,resizable=yes";
+		if (top.Dialog) {
+			dlg = new Dialog("ViewSheetDialog");
+			dlg.Width = window.screen.width * 0.7;
+			dlg.Height = window.screen.height * 0.64;
+			dlg.Title = "浏览工单:" + currentRow.BIZ_ID + ", 当前处理步骤:" + currentRow.TASK_NAME;
+			dlg.URL = loc;
+			dlg.ShowMessageRow = false;
+			dlg.ShowButtonRow = false;	
+			dlg.show();
+		} else
+			window.open(loc, "", sStyle);
+	}
+}
+
+//----------------------------------------------------------------------------------
+// 列的渲染方法
+//----------------------------------------------------------------------------------
+function attachRender(value, record , cell, grid, colNO, rowNO) {
+    if (value != "0" && value != "")
+        ret = "<img src='/eaptag2/css/image/AttachFile.png'>";
+    else 
+    	ret = " ";
+    return ret;
+}
+
+function titleRender(value, record , cell, grid, colNO, rowNO) {	
+    if (record.READ_FLAG >0)   
+        return value;
+    else
+        return "<b>"+value+"</b>";
+}
+
+function createDateRender(value, record , cell, grid, colNO, rowNO) {
+	if (value == null) return value;
+	
+	due = record.DUE_TIME;
+	if (record.DUE_TIME == null)
+		due = new Date();	
+	var tempDate = valueToDate(due);
+	
+	if ("$history" != "true" && new Date(tempDate) < new Date()) 
+        return "<font color='red'><b>" + value.substring(0,16) + "</b></font>";
+    else
+    	return value.substring(0,16);
+}
+
+function valueToDate(value) {
+	var year = value.substr(0,4);   
+    var month = value.substr(5,2);   
+    var day = value.substr(8,2);   
+    var tempDate = month+'/'+day+'/'+year+' '+value.substring(10,16);
+	return tempDate;
+}
+
+function taskTimeRender(value, record , cell, grid, colNO, rowNO) {
+	if (value == null) return value;
+	var tempDate = valueToDate(value);
+	if (new Date(tempDate) < new Date()) {
+		return "<b><font color='red'>" + value.substring(0,16) + "</font></b>";
+	}
+	else
+		return value.substring(0,16);
+}
+
+function finishTimeRender(value, record , cell, grid, colNO, rowNO) {
+	if (record.DUE_TIME !='' && record.DUE_TIME < record.CLOSE_TIME)
+		return "<b><font color='red'>" + value.substring(0,16) + "</font></b>";
+	else
+		return value.substring(0,16);
+}
+
+function truncDateRender(value, record , cell, grid, colNO, rowNO) {
+	if (value != null) 
+		return value.substring(0,16);
+	else
+		return value;
+}
+
+function newWorkSheet() {	
+	var loc = "/$module/jbpm?action=NewInstance&processName=$processName";
+	if (top && top.toPage)
+		top.toPage(loc, "新建 $processName");
+	else {
+		//window.open(loc);
+		var w = window.screen.width * 0.8;
+		var h = window.screen.height-220;
+		var sStyle = "width="+w+"px,height="+h+"px,left=" + window.screen.width*0.1 + "px,top=100px,scrollbars=yes,resizable=yes";
+		if (top.Dialog) {
+			dlg = new Dialog("CreateSheetDialog");
+			dlg.Width = window.screen.width * 0.7;
+			dlg.Height = window.screen.height * 0.64;
+			dlg.Title = "新建流程 $processName 工单";
+			dlg.URL = loc;
+			dlg.ShowMessageRow = false;
+			dlg.ShowButtonRow = false;					
+			dlg.show();
+		} else
+			window.open(loc, "", sStyle);
+	}
+}
+
+function doQuery() {
+	//参数名也要加上引号
+	var param = '"bizId":"'+bizId.value+'","title":"'+sheetTitle.value+'","userId":"$user"';
+	param = param + ',"processName":"$processName,"';
+	if (sheetType.value != '') param = param + ',"instStatus":"'+sheetType.value+'"';
+	else param = param + ',"processName":"$processName,"';
+	param = param + ',"startTime":"'+startTime.value+'"';
+	param = param + ',"endTime":"'+endTime.value+'"';
+	if ('$actor' == 'deal')
+		param = param + ',"actor":"deal"';
+
+	if (sender.value != '') param = param + ',"sender":"'+sender.value+'"';
+	if (creater.value != '') param = param + ',"creater":"'+creater.value+'"';
+	//if (caller.value != '') param = param + ',"caller":"'+caller.value+'"';
+	
+	if ('$view' == 'all')
+		param = param + ',"view":"all"';
+//alert(param);			
+	//每页记录，查询参数
+	var map = mygrid.resetParameter(15, param); 	
+#if ($history != "true")	
+	ajax.remoteCall("bean://com.suntek.jbpm.mgmt.WorkItemListQuery:getData", [map], function(reply) {
+#else
+	ajax.remoteCall("bean://com.suntek.jbpm.mgmt.WorkItemListHisQuery:getData", [map], function(reply) {
+#end	
+		/* 清除原数据 */
+		mygrid.cleanContent();
+		/* 更新数据 */  								
+		mygrid.setContent(eval("(" + reply.getResult() + ")"));
+	});
+}
+
+function luceneFind() {
+	//ajax.remoteCall("bean://LuceneTableImport:exec", [''], function(reply) { alert(reply.getResult()); });
+	
+	if (findText.value == '') { alert('请输入关键词查询'); return;}
+	if ('$actor' == 'deal')
+		param = '"findText":"' + findText.value + '","userId":"$user","processName":"$processName","actor":"deal",'; 
+	else {		
+		param = '"findText":"' + findText.value + '","userId":"$user","processName":"$processName",'; 
+	}
+#if ($history == "true")
+		param = param + '"history":"true",';
+#end	
+	var map = mygrid.resetParameter(15, param); 
+	ajax.remoteCall("bean://com.suntek.jbpm.mgmt.WorkItemListLuceneQuery:getData", [map], function(reply) {
+		/* 清除原数据 */
+		mygrid.cleanContent();
+		/* 更新数据 */  								
+		mygrid.setContent(eval("(" + reply.getResult() + ")"));
+	});
+}
+
+//-------------------------------------
+// 删除选中的工单
+//-------------------------------------
+function deleteWorkSheet() {
+	rows = mygrid.getSelectedRecords()
+	if (rows.length == 0) { alert("请选中待删除记录"); return }
+	if (confirm("确定要删除当前选中的工单吗?")) {
+		ajax.remoteCall("bean://com.suntek.jbpm.jpdl.exe.ctx.ProcessInstanceMgmt:deleteInstance", [rows[0].INST_ID], function(reply) {
+			alert(reply.getResult());
+		});
+	}
+}
+//-------------------------------------
+// 选中的工单置接单
+//-------------------------------------
+function acceptWorkSheet() {
+	rows = mygrid.getSelectedRecords()
+	if (rows.length == 0) { alert("请选中待接单记录"); return }
+	ajax.remoteCall("bean://com.suntek.jbpm.jpdl.exe.ctx.ProcessInstanceMgmt:acceptTask", 
+			[rows[0].TASK_ID, "$user"], function(reply) {
+		alert(reply.getResult());
+	});
+}
+function newRecordSave(){alert();}
+
+var conditionPanelVisible = false;
+
+function setConditionPanelVisible() {
+	if (!conditionPanelVisible) queryform.style.display = "block";
+	else queryform.style.display = "none";
+	conditionPanelVisible = !conditionPanelVisible;
+}
+
+</script>
+
+#set($timeLast = "m-3")
+#set($timeLastMsg = "[默认显示最近3个月的工单。红色标识：<创建时间>为总时限超时，<处理时限>为当前步骤超时]") 
+#if ($history == "true")
+#set($timeLast = "d-7")
+#set($timeLastMsg = "[默认显示最近一周。红色标识：<创建时间>为总时限超时，<处理时限>为当前步骤超时]")
+#end
+
+<body style="margin:0px" scroll=no>
+#set($winTitle = "我的待处理工单")
+#if ($history == "true"	)
+#set($winTitle = "已归档工单查询")
+#elseif ($actor != "deal")
+#if ($view == "all")
+#set($winTitle = "所有待处理工单")
+#else
+#set($winTitle = "已派发工单查询")
+#end
+#end
+<TABLE id="notewin" cellSpacing=0 cellPadding=0 height="100%" width="100%" border=0>
+		<TR>
+			<TD class=windowTitle >$winTitle</TD>
+		</TR>
+   		<TR id="btnarea">
+			<TD height="35" class="windowHead">
+				<table>
+				<tr>
+					<td width="100%">
+#if ($history != "true" && $actor == 'deal')			 
+#if ($CreateSheetPermission == "true")			   			
+    			<span class='btn' title='' id='7761' onclick="newWorkSheet()" style='margin:0px;'><img src='/eaptag2/css/images/ui.form/add.png'/> <span class='btntxt'>新建</span></span>
+#end    		
+				<!-- 	
+				<span class='btn' title='' id='2935' onclick="acceptWorkSheet()" style='margin:0px;'><img src='/eaptag2/css/images/ui.form/ok.png'/> <span class='btntxt'>接单</span></span>
+    			 -->
+#end
+				<!-- 
+    			<span class='btn' title='' id='7761' onclick="doQuery()" style='margin:0px;'><img src='/eaptag2/css/images/ui.form/tool_reload.gif'/> <span class='btntxt'>刷新</span></span> 
+    			-->
+    			<span class='btn' title='' id='7761' onclick="setConditionPanelVisible()" style='margin:0px;'><img src='/eaptag2/css/images/ui.form/tool_filter.gif'/> <span class='btntxt'>条件查询</span></span> $timeLastMsg    			
+    				</TD>
+	    			<td width="30%" width="*">&nbsp;
+    					<table cellspacing=0 cellpadding=0 width="100%" style="display:${LuceneSupport}"><tr><td align=right><input type='text' class='value-check-textbox textbox-border-blur' size=40 id='findText' 
+    						onkeydown="if(window.event.keyCode==13) luceneFind()" onclick='if(this.value=="请输入关键词") this.value=""' name='findText' value='请输入关键词'/><td class="s_imgArea"><a href="javascript:luceneFind()"></a></td></tr></table>
+    				</td>
+    			</tr>
+    			</table>    				
+    		</td>
+		</TR>
+   		<TR id="queryform" style="display: none">
+		<TD height="40" class="windowHead">
+
+				<table>
+					<tr>
+						<td style="vertical-align:bottom;padding-bottom:4px;text-align:right" width="100">工单编号:</td>
+						<td><input type='text' class='value-check-textbox textbox-border-blur' size=20 id='bizId' name='bizId' onfocus='vc_tb_on_focus(this)' onblur='vc_tb_on_blur(this)'></td>
+						<td style="vertical-align:bottom;padding-bottom:4px;text-align:right" width="60">标题:</td>
+						<td><input type='text' class='value-check-textbox textbox-border-blur' size=20 id='sheetTitle' name='sheetTitle' onfocus='vc_tb_on_focus(this)' onblur='vc_tb_on_blur(this)'></td>							
+						<td style="vertical-align:bottom;padding-bottom:4px;text-align:right" width="60">发件人:</td>
+						<td><input type='text' class='value-check-textbox textbox-border-blur' size=20 id='sender' name='sender' onfocus='vc_tb_on_focus(this)' onblur='vc_tb_on_blur(this)'></td>
+						<td style="vertical-align:bottom;padding-bottom:4px;text-align:right" width="60">处理阶段:</td>
+						<td>
+							<select id='sheetType' name='sheetType' style="width:123px">
+									<option value="">所有</option>						
+#set($i = 0)
+#foreach($row in $recordlist)						
+									<option value='$row'>$row</option>
+#set($i = $i + 1)
+#end		
+							</select>
+							
+						</td>	
+					</tr>
+					<tr>					
+						<td style="vertical-align:bottom;padding-bottom:4px;text-align:right" width="100">创建时间(起始):</td>
+						<td><input class='Wdate' type='text' id='startTime' name='startTime' size='20' initValue='{$timeLast}' dateFormat='yyyy-mm-dd' readOnly='true'/>
+						<td style="vertical-align:bottom;padding-bottom:4px;text-align:right" width="60">(结束):</td>
+						<td><input class='Wdate' type='text' id='endTime' name='endTime' size='20' initValue='' dateFormat='yyyy-mm-dd' readOnly='true'/>
+<script>
+var allProcessNames = '$processName';
+var dp_startTime = document.getElementById('startTime');
+if(dp_startTime.initValue != '{no}') {
+dp_startTime.value = new DateFormater().format(dp_startTime.dateFormat, dp_startTime.initValue);
+}
+dp_startTime.onfocus = function() { WdatePicker({dateFmt:convert_format(this.dateFormat),isShowToday:true,readOnly:eval(this.readOnly)}) };
+
+var dp_endTime = document.getElementById('endTime');
+if(dp_endTime.initValue != '{no}') {
+dp_endTime.value = new DateFormater().format(dp_endTime.dateFormat, dp_endTime.initValue);
+}
+dp_endTime.onfocus = function() { WdatePicker({dateFmt:convert_format(this.dateFormat),isShowToday:true,readOnly:eval(this.readOnly)}) };
+</script>
+</td>						 
+						<td style="vertical-align:bottom;padding-bottom:4px;text-align:right" width="60">创建人:</td>
+						<td><input type='text' class='value-check-textbox textbox-border-blur' size=20 id='creater' name='creater' onfocus='vc_tb_on_focus(this)' onblur='vc_tb_on_blur(this)'></td>
+						<!-- 
+						<td style="vertical-align:bottom;padding-bottom:4px;text-align:right" width="60">联系电话:</td>
+						<td><input type='text' class='value-check-textbox textbox-border-blur' size=20 id='caller' name='caller' onfocus='vc_tb_on_focus(this)' onblur='vc_tb_on_blur(this)'></td>
+						-->
+						<td width="*" colspan="3" align=right>&nbsp;&nbsp;<span class='btn' title='' id='2935' onclick="doQuery()" style='margin:0px;'><img src='/eaptag2/css/images/ui.form/query.png'/> <span class='btntxt'>查询</span></span></td>
+						
+					</tr>
+				</table>
+					</TD>
+	</TR>
+
+    			<TR id="notwinhead">
+		<TD  height="100%" width="100%" class="windowBody">
+<DIV id="mess_box" style=" height:100%; OVERFLOW-y:auto;">
+
+			    
+<script src="/eaptag2/js/ccftag.grid.js" type="text/javascript"></script>    
+
+<script type="text/javascript" >
+	
+//------------------------------------------
+// 缺省的列值设置函数
+//------------------------------------------
+function columnSet(value ,record, columnObj, grid, colNo, rowNo) { 	
+	if (value == 'null' || value == '') return '';
+	else return value; 
+}
+
+function _onRowSelected(value) {}
+
+//------------------------------------------
+// 数据装载之后, 提取 SQL 赋值
+//------------------------------------------
+function myResponseHandler(response, requestParameter) {
+	if (response["text"]) {
+		var resp = eval("(" + response["text"] + ")");
+		setCookie("SQL", resp.SQL, null, "/", null, null) 
+	}
+}
+
+function setCookie(name,value,expires,path,domain,secure) {    
+  	document.cookie = name + "=" + escape (value) +    
+    	((expires) ? "; expires=" + expires.toGMTString() : "") +    
+    	((path) ? "; path=" + path : "") +    
+    	((domain) ? "; domain=" + domain : "") + ((secure) ? "; secure" : "");    
+} 
+
+var dsConfigDim = []
+var colsConfigDim = []
+var gridConfigDim = []
+
+dsConfigDim[GTGridCountInPage] = {
+	//data : _data_ ,
+	uniqueField : '$uniqueField' ,
+	fields :[
+		{name : 'INST_ID' },
+		{name : 'ATTACHFILE' },
+		{name : 'BIZ_ID' },
+		{name : 'INST_TITLE' },
+		{name : 'PROC_NAME' },
+		{name : 'INIT_TIME' },
+#if($actor=="deal" || $history=="true")
+		{name : 'ASSIGN_UNAME' },
+#else
+		{name : 'DEALER' },		
+#end		
+		{name : 'ASSIGN_TIME' },
+		{name : 'TASK_NAME' },
+	],
+	recordType : 'object'
+};
+
+
+colsConfigDim[GTGridCountInPage] = [
+		{ id : 'ATTACHFILE' , header : "<img src=/eaptag2/css/images/ui.form/AttachFile.png>  " , hidden: false, emptyText:"", width : "20", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'left',editor:{},  renderer : attachRender}
+,
+		{ id : 'BIZ_ID' , header : "单号 " , emptyText:"", width : "100", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'center' ,editor:{}}
+,
+		{ id : 'INST_TITLE' , header : "标题 " , hidden: false, emptyText:"", width : "300", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'left',editor:{},  renderer : titleRender}
+,
+#if($processName == "")
+		{ id : 'PROC_NAME' , header : "流程" , emptyText:"", width : "10%", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'center' ,editor:{}}
+#else
+		{ id : 'INIT_TIME' , header : "创建时间" , emptyText:"", width : "120", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'center' ,editor:{}, renderer: createDateRender}		
+#end
+,
+#if($actor=="deal")
+		{ id : 'ASSIGN_UNAME' , header : "发件人 " , emptyText:"", width : "100", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'center' ,editor:{}}
+,		{ id : 'ASSIGN_TIME' , header : "派发时间 " , emptyText:"", width : "120", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'center' ,editor:{},  renderer : truncDateRender}
+,		{ id : 'DUE_TIME2' , header : "处理时限 " , emptyText:"", width : "120", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'center' ,editor:{},  renderer : taskTimeRender}		
+,		{ id : 'TASK_NAME' , header : "处理阶段 " , emptyText:"", width : "120", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'center' ,editor:{}}
+];
+#elseif($history=="true")
+		{ id : 'INIT_UNAME' , header : "创建人 " , emptyText:"", width : "8%", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'center' ,editor:{}}
+,		{ id : 'DUE_TIME' , header : "完工时限 " , emptyText:"", width : "12%", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'center' ,editor:{}, renderer: truncDateRender}
+,		{ id : 'CLOSE_TIME' , header : "完成时间 " , emptyText:"", width : "12%", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'center' ,editor:{},  renderer : finishTimeRender}		
+,		{ id : 'TASK_NAME' , header : "处理阶段 " , emptyText:"", width : "120", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'center' ,editor:{}}
+
+];		
+#else
+		{ id : 'ASSIGN_UNAME' , header : "收件人 " , emptyText:"", width : "8%", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'center' ,editor:{}}
+,		{ id : 'ASSIGN_TIME' , header : "派发时间 " , emptyText:"", width : "12%", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'center' ,editor:{},  renderer : truncDateRender}
+,		{ id : 'DUE_TIME2' , header : "处理时限 " , emptyText:"", width : "12%", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'center' ,editor:{},  renderer : taskTimeRender}		
+,		{ id : 'TASK_NAME' , header : "处理阶段 " , emptyText:"", width : "120", isCheckColumn : false, frozen : false  ,headAlign:'center',  align :'center' ,editor:{}}
+];		
+#end
+
+
+gridConfigDim[GTGridCountInPage] = {
+
+	id : "mygrid",
+	
+	dataset : dsConfigDim[GTGridCountInPage] ,
+
+	columns : colsConfigDim[GTGridCountInPage] ,
+
+	container : 'containermygrid', 
+	toolbarPosition : 'bottom',
+
+	toolbarContent : 'nav | goto | pagesize | reload | filter mybutton $dynamicBtn | state' ,
+	selectRowByCheck: false,
+	
+	//showGridMenu: true,
+	//allowCustomSkin: true,
+	//allowFreeze: true,
+	autoLoad: true,
+	//showIndexColumn: true,
+
+	onClickCell: rowSelected,
+	onDblClickCell: cellDblClick,
+
+	loadResponseHandler : myResponseHandler, 
+
+	pageSize : 15 ,
+	
+	pageSizeList : [5,10,15,20],
+#if($history == "true"	)
+	loadURL: "/$module/ccftag/pojo/bean://com.suntek.jbpm.mgmt.WorkItemListHisQuery:getData",
+#else	
+	loadURL: "/$module/ccftag/pojo/bean://com.suntek.jbpm.mgmt.WorkItemListQuery:getData",
+#end	
+	saveURL: "/$module/ccftag/pojo/null",	
+	
+	remotePaging: true,
+	parameters: {DataSourceName:"OSS_LOCAL",userId:'$user',actor:'$actor',processName:'$processName ',view:'$view', uniqueField:'${uniqueField}',tableName:'${tableName}' ,SQL:"${SQL}"}
+
+};
+
+Sigma.ToolFactroy.register(
+    'mybutton',  //id of the button. Lower case accepted only.
+    {
+        // css style of the button        
+        cls : 'exportBtn-cls',  
+        // tip of the button
+        toolTip : '导出excel表格',        
+        //function fired when button pressed
+        action : exportXls
+    }
+);   
+
+/**
+* 用于获取当前grid的查询参数
+* By ZhouHuan, 2010-3-2
+*/
+function getGridParameters() {
+	var params = mygrid. parameters;
+	var str = [];
+	for(var k in params) {
+		// 跳过params中没有被赋值
+		if((params[k]+"").indexOf("${") == 0) continue; 
+		str.push( k +":"+ params[k]);
+	}
+	return str.join("$");
+}
+
+function  exportXls(expFileName) {  
+    if(typeof(expFileName)!="string"){
+    	expFileName = "";
+    }
+   	if (confirm("导出当前查询结果到 Excel 表格吗 ?")) {
+   		var headCaptions = "";
+   	   	var headFieldNames = "";
+   	 	var headNeedExport = "{";
+   	 	var headFieldOptions = "";
+   	 	for (var i=0; i<colsConfigDim[GTGridCountInPage].length; i++) {
+   	 		var item = colsConfigDim[GTGridCountInPage][i];
+   	 		if (item.id != "") {
+   	   	 		headCaptions = headCaptions + item.header + ",";
+   	   	 		headFieldNames = headFieldNames + item.id + ",";
+   	   		}
+   	   		headNeedExport = headNeedExport + "true,";
+   	   		headFieldOptions = headFieldOptions + "|"; 
+   	   	}
+   	   	headNeedExport = headNeedExport + "}";
+   	   	
+   		location = ("/${module}/ccftag/grid/export/?head="+encodeURI(encodeURI(headCaptions))+"&field="+headFieldNames+"&module=${module}&dataSourceName="+datasourceName+"&hasCheckedColumn=false&headNeedExport="+headNeedExport+"&headFieldOptions="+headFieldOptions+"&expFileName="+ expFileName +"&gridParameters="+ getGridParameters());
+	}
+}
+</script> 
+
+<!-- grid的容器. -->
+<div id="containermygrid" style="width:100%; height:100%; overflow:auto"></div>
+
+<script>
+
+var mygrid = new Sigma.Grid( gridConfigDim[GTGridCountInPage] );
+
+$(document).ready(function() {
+	mygrid. render();
+})  
+
+	/**
+	 * 自动选中Render方法设置的checked状态的行 
+	 * render 方法里面还未初始化表格，所以放在 grid 的 complete 事件处理
+	 */
+	mygrid. onComplete = function(grid) { 		
+		var checklist = GRID_SELECTED_ROWIDX.split(",");
+		for (var i=0; i<checklist.length; i++)
+	    	grid.selectRowByIdx(checklist[i]); 
+	    GRID_SELECTED_ROWIDX = "";      
+	}
+	
+</script> 
+					</DIV>
+		</TD>
+	</TR>
+
+</table>
+
+</body>

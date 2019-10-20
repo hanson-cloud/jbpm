@@ -1,0 +1,10 @@
+<project name="jbpm" default="buildWAR" basedir=".">
+	<!--生成jar-->
+		<target name="buildWAR"  >
+			<jar jarfile="jbpm.jar" compress="yes">
+				<fileset dir="bin">
+				</fileset>
+			</jar>
+		</target>
+
+</project>

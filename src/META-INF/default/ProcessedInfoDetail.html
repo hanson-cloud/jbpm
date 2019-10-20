@@ -1,0 +1,105 @@
+
+<html>
+<head>
+     <title></title>
+     <meta http-equiv="Content-Type" content="text/html; charset=GBK" />
+</head>
+	
+<style>
+	.trmouseover { background: #ebeadb url(/jbpm/images/toolbar_bg.gif) repeat-x; }
+	/*.trmouseover { background: #ebeadb; }*/
+	.trselected { background-color: #FFE88C; }
+	.spanrow {background-image: url(/jbpm/images/spanrow.gif); height:22px; text-align:center}
+	.spanrow2 {height:21px; }
+	.custcode { text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100px } 
+	.alarmbar { BACKGROUND-IMAGE: url(/eaptag2/css/images/tag/bg_availability_red.gif) }
+
+</style>
+	
+
+<script type="text/javascript" src="/eaptag2/js/ccftag.zdialog.js" ></script>
+<script type="text/javascript" src="/eaptag2/js/ccftag.form.js"></script>
+
+<script type="text/javascript" src="/eaptag2/js/ccftag.jbpm.js"></script>
+
+
+<script>
+var dlg = null;
+function addComment() {
+	dlg = new Dialog("OuterFrameDialog");
+	dlg.Width = 600;
+	dlg.Height = 150;
+	dlg.Title = "新增工单处理意见";
+	dlg.URL = "/jbpm/jsp/TaskCommentsList.jsp";
+	dlg.ShowMessageRow = false;
+	dlg.ShowButtonRow = true;
+	dlg.OKEvent = function(){ postComment(); dlg.close(); };		
+	dlg.show();
+}
+
+function postComment() {
+	content = Dialog.getInstance("OuterFrameDialog").getIFrame().getContent();
+	if (content == '') return;	
+	var map = {};
+	map.module = "${module}";
+	map.instId = "${instanceId}";
+	map.taskName = "${taskName}";
+	map.taskId = "${taskId}";
+	map.content = content.replace("&", "").replace("(","（").replace(")","）").
+				  			replace("<","《").replace(">","》");	
+	ajax.remoteCall("bean://com.suntek.jbpm.client.comments.CommentsDAO:insert", [map], function(reply) {
+		var comment = eval(reply.getResult());
+		sendTime = comment.DEAL_TIME;
+		$("#commentlist").append("<tr bgcolor=ffffff><td align='center'>" + (count+1) + "</td>" + 
+				"<td align='center'>" + comment.DEAL_UNAME + "</td>" +
+				"<td align='center'>" + comment.DEAL_DEPT + "</td>" +
+				"<td align='center'>" + comment.DEAL_TIME + "</td>" + 
+				"<td style='word-break:break-all'>" + map.content + "</td>" +
+				"</tr>");
+		count = count+1;
+	});	
+}
+</script>
+<body width="100%" style="padding: 2px; background-color:648BC1; overflow-y:auto"> 
+	
+	<table width="100%" height="100%" align="center" cellspacing="1" cellpadding="2" bgcolor="#CCCCCC">	
+		<tr style="border:1px solid #CCCCCC; border-bottom:0px; padding-top:3px">
+			<td bgcolor="EEEEEE" height="20" colspan="6">	        			
+				<span style="padding-left:5px; text-align:left;width:80%">所有处理意见</span>
+				<span style="text-align:right; width:18%"><img src="/jbpm/images/add.gif" style="cursor:hand" id="addCommentBtn" onclick="addComment()" title="新增附加处理意见"/>&nbsp;</span>
+			</td>
+		</tr>
+		
+        <tr width="100%" height="20" bgcolor="eeeeee" style="font-weight:bold">
+        	<td width="20" align=center class="spanrow">...</td>
+         	<td width="120" align=center class="spanrow">任务名称</td>
+         	<td width="150" align=center class="spanrow">发送部门</td>
+         	<td width="120" align=center class="spanrow">发送人</td>		
+         	<td width="160" align=center class="spanrow">发送时间</td>
+         	<td id="topicTR" width="*" align=center class="spanrow">标题</td>	         		
+        </tr>
+        <script>topicTR.style.width = screen.Width - 840</script>
+#foreach($row in $recordlist)         
+        <tr width="100%" height="20" bgcolor="FFFFFF">
+#if($row.FLAG == '2')        	
+        	<td width="20" align=center><img src="/jbpm/images/invite.png"/></td>
+#else
+			<td width="20" align=center><img src="/jbpm/images/Forward.png"/></td>
+#end			
+         	<td width="120" align=center >$row.TASK_NAME</td>
+         	<td width="150" align=center >$row.ASSIGN_DEPT</td>
+         	<td width="160" align=center >$row.ASSIGN_UNAME</td>		
+         	<td width="120" align=center >$row.DEAL_TIME</td> 
+         	<td id="topicTR" width="*" align="left"  >
+         	 <script type="text/javascript">
+         		var assignMemo =  ("$row.ASSIGN_MEMO").replace("/n","<br/>");
+         	 	document.writeln(assignMemo);
+         	 	</script>
+         	</td>	         		
+        </tr>        
+#end        
+		<tr bgcolor="ffffff"><td colspan="6" height="*">&nbsp;</td></tr>
+	    
+	</table>
+</body>
+</html>

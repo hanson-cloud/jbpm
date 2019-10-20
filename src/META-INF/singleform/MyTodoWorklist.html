@@ -1,0 +1,499 @@
+<html>
+<head>
+<title>工单查询模板3</title>     
+<meta http-equiv="Content-Type" content="text/html; charset=GBK" />
+<style> 
+	.paramTitle {vertical-align:bottom;padding-bottom:4px;text-align:right; width:80; padding-right:10px}	
+</style>
+</head>  
+<script type="text/javascript" src="/eaptag2/js/ccftag.zdialog.js"></script>
+<script type="text/javascript" src="/eaptag2/js/ccftag.form.js"></script>
+<script type="text/javascript" src="/eaptag2/js/ccftag.datepick.js"></script>
+<script type="text/javascript" src="/eaptag2/js/ccftag.textbox.js"></script>
+<script type="text/javascript" src="/eaptag2/js/ccftag.toolbar.js" ></script>
+<script type="text/javascript" src="/eaptag2/js/ccftag.jbpm.js"></script>
+<script type="text/javascript" src="/eaptag2/js/ccftag.jbpm-grid.js"></script>
+ 
+#if(${TodoWorklistJavaScript})
+<script type="text/javascript" src="${TodoWorklistJavaScript}"></script>
+#end
+
+<script>
+var ajax = new ccftag_ajax("/$module/ccftag"); 
+var datasourceName = "${dataSource}";
+var moduleName = "${module}";
+var processName = "${processName}";
+var currentUser = "${user}";
+var ccFlag = "${ccflag}";
+var viewType = "${view}";
+var openWin = "${openWin}";
+
+#if($width) 
+	JBPM.setSize(${width}, ${height});
+#end
+
+#set($QUERY_TIMELIMIT3time = ${QUERY_TIMELIMIT} * 3)
+
+
+
+/** 工单条件查询 */
+function doQuery() {
+	if (queryForm.startTime.value == '' || queryForm.endTime.value == '') { alert("时间选择不允许为空，请选择"); return; }
+#if($view == "history" || $view == "all")	
+	if(subsInDay(queryForm.startTime.value, queryForm.endTime.value) - 3 > ${QUERY_TIMELIMIT}) { alert("当前查询时间范围不能超过${QUERY_TIMELIMIT}天, 请重新选择"); return; }
+#else
+	if(subsInDay(queryForm.startTime.value, queryForm.endTime.value) - 3 > ${QUERY_TIMELIMIT3time}) { alert("当前查询时间范围不能超过${QUERY_TIMELIMIT3time}天, 请重新选择"); return; }
+#end
+
+	var param = getParam();	
+	//每页记录，查询参数
+	var map = jbpmGrid.resetParameter(20, param); 	
+#if ($view != "history")	
+	ajax.remoteCall("bean://com.suntek.jbpm.mgmt.WorkItemListQuery:getData", [map], function(reply) {
+#else
+	ajax.remoteCall("bean://com.suntek.jbpm.mgmt.WorkItemListHisQuery:getData", [map], function(reply) {
+#end
+		//jbpmGrid.cleanContent();						
+		jbpmGrid.setContent(eval("(" + reply.getResult() + ")"));
+	});
+}	 
+
+function getParam() {
+	//参数名也要加上引号
+	var param = '"userId":"$user","processName":"$processName","subtable":"$extendQuery.tableName","transition":"$transition"';
+	param = param + ',"view":"' + viewType + '"';
+	
+	var els = queryForm.elements;
+	for (i=0; i<els.length; i++) {
+		if (els[i].value != null && els[i].name != 'findText') 
+			param = param + ',"' + els[i].name + '":"' + els[i].value + '"';
+	}
+	return param;
+}
+
+                             
+</script>
+
+<body style="margin:0px" scroll=no>
+
+#set($QUERY_TIMELIMIT3timeM = ${QUERY_TIMELIMIT3time}/30)
+#set($QUERY_TIMELIMIT3timeD = ${QUERY_TIMELIMIT3time}%30)
+
+#set($QUERY_TIMELIMITtimeM = ${QUERY_TIMELIMIT}/30)
+#set($QUERY_TIMELIMITtimeD = ${QUERY_TIMELIMIT}%30)
+
+#set($queryLimitDays = "{m-$QUERY_TIMELIMIT3timeM}{d-$QUERY_TIMELIMIT3timeD}")
+#set($winTitle = "我的待处理工单, 默认显示最近${QUERY_TIMELIMIT3time}天的工单")  
+#if ($view == "all")
+#set($winTitle = "所有待处理工单, 默认显示最近${QUERY_TIMELIMIT}天的工单")
+#set($QUERY_TIMELIMIT = ${QUERY_TIMELIMIT})
+#set($queryLimitDays = "{m-$QUERY_TIMELIMITtimeM}{d-$QUERY_TIMELIMITtimeD}")
+#end
+#if ($view == "fromMe")
+#set($winTitle = "我的已派发工单查询, 默认显示最近${QUERY_TIMELIMIT3time}天的工单")
+#end
+#set($queryMsg = "")
+#if ($view == "history")
+#set($winTitle = "历史工单查询, 默认显示最近${QUERY_TIMELIMIT}天的工单")
+#set($QUERY_TIMELIMIT = ${QUERY_TIMELIMIT})
+#set($queryLimitDays = "{m-$QUERY_TIMELIMITtimeM}{d-$QUERY_TIMELIMITtimeD}")
+#end	
+	
+<!-- --------------------------------queryform div----------------------------- -->
+#set($queryformHeight = (6 + ${recordlist.size()}) * 15)
+<div style="display:none; position:absolute;left:100;top:100;width:550;height:${queryformHeight}" id="queryformDiv">
+<TABLE cellSpacing=0 cellPadding=5 height="100%" width="100%" border=0>
+	<TR><TD class=windowTitle height="20">扩展查询条件</TD></TR>	
+	<TD height="${queryformTDHeight}" style="border:solid 1px #99bbe8;BACKGROUND-COLOR:#cbdeec;" id="queryformTD">
+		<form name="queryForm">
+		<table>
+			<tr>
+				<td class="paramTitle" nowrap>工单号</td>
+				<td width="350"><input type='text' class='value-check-textbox textbox-border-blur' size=34 id='bizId' name='bizId'></td>
+
+				<td class='paramTitle' nowrap>标题</td> 
+				<td colspan="3"><input type='text' class='value-check-textbox textbox-border-blur' size=34 id='sheetTitle' name='sheetTitle'></td>							
+			</tr>
+			<tr>
+				<td class='paramTitle' nowrap>创建人</td>
+				<td><input type='text' class='value-check-textbox textbox-border-blur' size=34 id='creater' name='creater' value=''></td>
+
+				<td class='paramTitle' nowrap>创建时间</td>
+				<td colspan="3"><input class='Wdate' type='text' id='startTime' name='startTime' size='14' initValue='{$queryLimitDays}' dateFormat='yyyy-mm-dd' readOnly='true'/>-
+					<input class='Wdate' type='text' id='endTime' name='endTime' size='14' initValue='{d+1}' dateFormat='yyyy-mm-dd' readOnly='true'/>
+						<script>
+						var dp_startTime = document.getElementById('startTime'); 
+						if(dp_startTime.initValue != '{no}') { dp_startTime.value = new DateFormater().format(dp_startTime.dateFormat, dp_startTime.initValue);}
+						dp_startTime.onfocus = function() { WdatePicker({dateFmt:convert_format(this.dateFormat),isShowToday:true,readOnly:eval(this.readOnly)}) };
+						var dp_endTime = document.getElementById('endTime');
+						if(dp_endTime.initValue != '{no}') { dp_endTime.value = new DateFormater().format(dp_endTime.dateFormat, dp_endTime.initValue);}
+						dp_endTime.onfocus = function() { WdatePicker({dateFmt:convert_format(this.dateFormat),isShowToday:true,readOnly:eval(this.readOnly)}) };
+						</script>
+				</td>			
+			</tr>
+			<tr>																	 
+				<td class='paramTitle' nowrap>超时状态</td>
+				<td>
+					<select id='overtime' name='overtime' style="width:190px">
+					<option value="0">所有</option>
+					<option value="1">全程超时</option>
+					<option value="2">当前步骤超时</option>
+					</select>
+				</td>
+#if ($view != "history")
+				<td class='paramTitle' nowrap>处理阶段</td>
+				<td>
+					<select id='sheetType' name='sheetType' style="width:190px">
+					<option value="">所有</option>
+#set($i = 0)
+#foreach($row in $recordlist)						
+				<option value='$row'>$row</option>
+#set($i = $i + 1)
+#end		
+				</select>														
+			</td>
+#else
+			<td class='paramTitle' nowrap>关闭时间</td>
+			<td colspan="3"><input class='Wdate' type='text' id='startTime2' name='startTime2' size='34' initValue='{no}' dateFormat='yyyy-mm-dd' readOnly='true'/>
+					<script>
+					var dp_startTime2 = document.getElementById('startTime2'); 					
+					dp_startTime2.onfocus = function() { WdatePicker({dateFmt:convert_format(this.dateFormat),isShowToday:true,readOnly:eval(this.readOnly)}) };
+					</script>
+			</td>
+#end			
+			</tr>
+			
+			<!--
+			<td style="vertical-align:bottom;padding-bottom:4px;text-align:right">联系电话</td>
+			<td><input type='text' class='value-check-textbox' size=15 id='caller' name='caller'></td>						
+			-->
+			
+#set($j=1)			
+#foreach($extField in $extendQuery.fields)   
+#if($j  ==1 )
+  	<tr>
+#end
+#if ($extField.asParam == "true")	
+		
+				<td class='paramTitle' nowrap> $extField.name </td>
+#if (!$extField.option.size() && $extField.operator != 'between' && $extField.operator != 'strbetween') 			
+				<td align=left nowrap> <input type='text' class='value-check-textbox textbox-border-blur' size=34 id='$extField.id' name='$extField.id'> </td>
+#end
+#if ($extField.operator == 'between' || $extField.operator == 'strbetween')
+				<td ><input class='Wdate' type='text' id='startTime_${extField.id}' name='startTime_${extField.id}' size='14' initValue='{no}' dateFormat='yyyy-mm-dd' readOnly='true'/>-
+					<input class='Wdate' type='text' id='endTime_${extField.id}' name='endTime_${extField.id}' size='14' initValue='{no}' dateFormat='yyyy-mm-dd' readOnly='true'/>
+						<script>
+						var dp_startTime_${extField.id} = document.getElementById('startTime_${extField.id}');
+						if(dp_startTime_${extField.id}.initValue != '{no}') { dp_startTime_${extField.id}.value = new DateFormater().format(dp_startTime_${extField.id}.dateFormat, dp_startTime_${extField.id}.initValue);}
+						dp_startTime_${extField.id}.onfocus = function() { WdatePicker({dateFmt:convert_format(this.dateFormat),isShowToday:true,readOnly:eval(this.readOnly)}) };
+						var dp_endTime_${extField.id} = document.getElementById('endTime_${extField.id}');
+						if(dp_endTime_${extField.id}.initValue != '{no}') { dp_endTime_${extField.id}.value = new DateFormater().format(dp_endTime_${extField.id}.dateFormat, dp_endTime_${extField.id}.initValue);}
+						dp_endTime_${extField.id}.onfocus = function() { WdatePicker({dateFmt:convert_format(this.dateFormat),isShowToday:true,readOnly:eval(this.readOnly)}) };
+						</script>
+				</td>			
+#end
+#if ($extField.option.size())
+				<td align=left>
+#if (!$extField.subElement)				
+	<script> var ${extField.id}_options = {} </script>
+				<select id='$extField.id' name='$extField.id' style="width:190px"  optionSQL="$extField.optionSQL">
+#else
+	<script> var ${extField.id}_options = {} </script>
+				<select id='$extField.id' name='$extField.id' style="width:190px"  onchange="cascadeChangeBpm(this,$extField.subElement)">
+#end				
+				<option value="">所有</option>
+#foreach($keyvalue in $extField.option)
+	<script> ${extField.id}_options['$keyvalue.FKEY'] = '$keyvalue.FVALUE' </script>
+				<option value="$keyvalue.FKEY"> $keyvalue.FVALUE </option>
+#end
+				</select>
+			</td>
+#end						
+<!-- end select -->
+	#if($j % 2 ==0 &&  $j>0)
+   </tr><tr>
+  #end
+  #set($j = $j + 1)
+#end
+
+#end
+</tr>
+			<tr>
+				<td style="text-align:center; height:40" colspan='4'>
+				<span class='btn' onclick="doQuery(); setConditionPanelVisible()" onmouseover="btnMouseOver(this)" onmouseout="btnMouseOut(this)" onmousedown="btnMouseDown(this)"><span class='btntxt'>查询</span></span>
+				<span class='btn' onclick="setConditionPanelVisible()" onmouseover="btnMouseOver(this)" onmouseout="btnMouseOut(this)" onmousedown="btnMouseDown(this)"><span class='btntxt'>关闭</span></span>
+				</td>
+			</tr>
+		</table>
+		</form>				
+		</TD>
+</table>
+</div>
+<!-- ----------------------------------------------- -->
+	
+<TABLE id="notewin" cellSpacing=0 cellPadding=0 height="100%" width="100%" border=0>
+	<TR><TD class=windowTitle >$winTitle</TD></TR>
+   	<TR id="btnarea">
+   	<TD height="35" class="windowHead">
+		<table width="100%" id='buttonArea'>
+			<tr>
+			<td width="80%" id='buttonTD'>
+				<ul id='menuModel_todo' style='display:none'>					
+#if ($view == 'mine' || $view == "dept" || $view == "role" || $view == "group")			 
+#if ($CreateSheetPermission == "true")		
+#if ($processName)	   			
+			<li id='7160' jsFunction="newWorkSheet()" itemIcon='/eaptag2/css/images/ui.form/add.png'><a href='#'>新增</a></li>
+#end			    		
+#end
+#if ($CancelSheetPermission == "true") 
+			<li id='7161' jsFunction="deleteWorkSheet()" itemIcon='/eaptag2/css/images/ui.form/delete.png'><a href='#'>作废</a></li>
+#end		
+			<li id='7162' jsFunction="doRemind()" itemIcon='/eaptag2/css/images/ui.form/alarm.png' title='向选中的工单当前处理人发送催单信息'><a href='#'>催单</a></li>
+#else
+#if ($view != 'history')
+			<li id='7162' jsFunction="doRemind()" itemIcon='/eaptag2/css/images/ui.form/alarm.png' title='向选中的工单当前处理人发送催单信息'><a href='#'>催单</a></li>
+			
+#if ($view == 'fromMe' && $RedrawSheetPermission == "true")
+    		<li id='7164' jsFunction="doRedraw()" itemIcon='/eaptag2/css/images/ui.form/cancel.png' title='回撤已发送的工单'><a href='#'>撤回</a></li>    		
+#else
+#if ($ArchiveSheetPermission == "true") 
+			<li id='7163' jsFunction="doArchive()" itemIcon='/eaptag2/css/images/ui.form/disk.png' title='归档选中的工单'><a href='#'>归档</a></li>
+#end
+#end   
+#end 		    		
+#if (($view == 'history' || $view == 'all') && $ReopenPermission == "true")
+    		<li id='7165' jsFunction="doReopen()" itemIcon='/eaptag2/css/images/ui.form/cancel.png' title='重新打开已归档的工单'><a href='#'>重新打开</a></li>    		
+#end
+#end
+#if ($printerDef == 'true')
+			<li id='7166' jsFunction="doPrint()" itemIcon='/eaptag2/css/images/ui.form/Print.png' title='打印选中的工单'><a href='#'>打印</a></li>
+#end
+#if ($view == 'mine')
+#if ($checkout == 'exclusive')			
+			<li id='7167' jsFunction="doLockSelectedItem()" itemIcon='/eaptag2/css/images/ui.form/LockItem.png' title='锁定当前选中的工单'><a href='#'>锁定</a></li>
+			<li id='7168' jsFunction="doUnlockSelectedItem()" itemIcon='/eaptag2/css/images/ui.form/ReadItem.png' title='解除当前锁定的工单'><a href='#'>解锁</a></li>			
+#end
+#end
+#if ($view == 'fromMe' || $view == 'all' || $view == 'dept' || $view == 'role' || $view == "group")
+#set ($LuceneSupport = 'none')
+#end
+			<li id='6488' itemType='separator'></li>
+			<li id='7169' jsFunction="setConditionPanelVisible()" itemIcon='/eaptag2/css/images/ui.form/tool_filter.gif' title='解除当前锁定的工单'><a href='#'>查询条件</a></li>			
+    		<!-- <li id='7170' jsFunction="doQuery()" itemIcon='/eaptag2/css/images/ui.form/query.png' title='刷新工单查询'><a href='#'>刷新</a></li> -->
+    		
+#if ($view == 'mine')
+#if ($BatchDealPermission == "true")
+			<li id='6489' itemType='separator'></li>
+    		<li id='7171' jsFunction="doBatchDeal()" itemIcon='/eaptag2/css/images/ui.form/Batch.png' title='批量处理选中的相同处理步骤的工单'><a href='#'>批量处理</a></li>    		
+#end 
+#end    
+#if (($view == 'all' || $view == 'dept' || $view == 'role' || $view == "group") && $RedistributePermission == "true")
+			<li id='6490' itemType='separator'></li>
+			<li id='7172' jsFunction="redistributeTask()" itemIcon='/jbpm/images/tranfer.png' title='重新分派当前查询的所有工单'><a href='#'>重新分派</a></li>			
+#end			
+				</ul>
+				<div id='toolBar_todo'></div>
+<script>
+var menuModel = new DHTMLSuite.menuModel();
+menuModel.addItemsFromMarkup('menuModel_todo');
+menuModel.setMainMenuGroupWidth(00);
+menuModel.init();
+
+var menuBar = new DHTMLSuite.menuBar();
+menuBar.addMenuItems(menuModel);
+menuBar.setTarget('toolBar_todo');
+menuBar.init();
+</script>				
+			</TD>
+	    	<td width="20%" align="right">
+	    		<span style='padding-bottom:0px !important; padding-bottom:0px; width:120px; display:${LuceneSupport}'>
+	    		<input type='text' class='value-check-textbox textbox-border-blur' style='width:120px' id='findText' name='findText'
+	    				onkeydown="if(window.event.keyCode==13) luceneFind()" value=''/>
+	    		</span><span class='ms_imgArea' style="display:${LuceneSupport}"><a href="javascript:" onfocus='this.blur()'></a></span>    			
+    		</td>
+    		</tr>
+    	</table>    				
+    </td>
+	</TR>
+   	
+	<TR id="notwinhead">
+	<TD  height="100%" width="100%" class="windowBody">
+		<DIV id="mess_box" style=" height:100%; width:100%; OVERFLOW-y:auto;">
+	    
+<script src="/eaptag2/js/ccftag.grid.js" type="text/javascript"></script>    
+<script type="text/javascript" >
+
+var dsConfigDim = []
+var colsConfigDim = []
+var gridConfigDim = []
+
+dsConfigDim[GTGridCountInPage] = {
+	//data : _data_ ,
+	uniqueField : '$uniqueField' ,
+	fields :[
+		{name: 'INST_ID' },
+		{name: 'ATTACHFILE' },
+		{name: 'BIZ_ID' },
+		{name: 'INST_TITLE' },
+		{name: 'PROC_NAME' },
+		{name: 'INIT_TIME' },
+#if($view == "mine" || $view == "dept" || $view == "all" || $view == "history" || $view == "role" || $view == "group")
+		{name: 'ASSIGN_UNAME' },
+		{name: 'TRANS_NAME' },
+#else
+		{name: 'DEALER' },		
+#end		
+		{name: 'ASSIGN_TIME' },
+		{name: 'CLOSE_TIME' },
+		{name: 'TASK_NAME' },
+	],
+	recordType : 'object'
+};
+
+colsConfigDim[GTGridCountInPage] = [
+	<!--{ id : 'INIT_ID' , header : "ID ", width : "10", isCheckColumn: true},-->
+	{ id : 'ATTACHFILE' , header : "<img src=/eaptag2/css/images/ui.form/AttachFile.png title='附件'> " , width : "20", renderer: attachRender},
+	{ id : 'REMINDED' , header : "<img src=/eaptag2/css/images/ui.form/Remind2.png title='催单信息'> " , width : "20", renderer: remindRender},
+	{ id : 'READ_FLAG' , header : "<img src=/eaptag2/css/images/ui.form/Flag.png title='工单状态'> " , width : "20", renderer: flagRender},
+	{ id : 'BIZ_ID' , header : "工单号 ", sortable:true, width : "80", headAlign:'center',  align :'center'},
+	<!-- { id : 'INST_TITLE' , header : "标题 ", sortable:true, width : "250", headAlign:'center',  align :'left'}, -->	
+#if (!$processName)
+	{ id : 'PROC_NAME' , header : "流程" , sortable:true, width : "100", headAlign:'center', align:'center'},
+#end
+#if ($extendQuery.bpmFieldLeft.indexOf('INIT_TIME')>=0)
+	{ id : 'INIT_TIME' , header : "创建时间" , sortable:true, headAlign:'center', width:110, align :'center', renderer: createDateRender},
+	{ id : 'INIT_UNAME' , header : "创建人" , sortable:true, headAlign:'center', width:100, align :'center'},
+#end	
+#if($view == 'mine' || $view == "dept" || $view == "all" || $view == "role" || $view == "group") 
+#if ($extendQuery.bpmFieldLeft.indexOf('ASSIGN_UNAME')>=0)
+	{ id : 'ASSIGN_UNAME' , header : "发件人 " , sortable:false, headAlign:'center', width:100, align :'center', renderer: assignManRender},	
+	{ id : 'TRANS_NAME' , header : "动作" , width:"60", sortable:false, headAlign:'center', align :'center'},	
+#end
+#if ($extendQuery.bpmFieldLeft.indexOf('ASSIGN_TIME')>=0)	
+	{ id : 'ASSIGN_TIME' , header : "派发时间 " , sortable:true, headAlign:'center', width:110, align :'center',  renderer : taskTimeRender}	,	
+#end
+#if ($extendQuery.bpmFieldLeft.indexOf('TASK_NAME')>=0)	
+	{ id : 'TASK_NAME' , header : "处理阶段 " , width : "90", sortable:true, headAlign:'center', align :'center'},
+#if ($view == 'history' || $view == 'all')
+	{ id : 'CLOSE_TIME', header : "状态 ", width:"62", sortable:false, headAlign:'center', align :'center',  renderer : closeTimeRender},
+#end	
+#end
+#if ($view == 'all')
+#if ($extendQuery.bpmFieldLeft.indexOf('DEALER')>=0)
+	{ id : 'DEALER' , header : "收件人 ", sortable:false, headAlign:'center', align :'center'},
+#end
+#end
+#else
+#if ($extendQuery.bpmFieldLeft.indexOf('DEALER')>=0)
+	{ id : 'DEALER' , header : "收件人 ", sortable:false, headAlign:'center', align :'center'},
+#end
+#if ($extendQuery.bpmFieldLeft.indexOf('ASSIGN_TIME')>=0)	
+	{ id : 'CLOSE_TIME' , header : "关闭时间 ", sortable:true, headAlign:'center', width:110, align :'center',  renderer : truncDateRender},
+#end		
+#if ($extendQuery.bpmFieldLeft.indexOf('TASK_NAME')>=0)			
+	{ id : 'TASK_NAME' , header : "处理阶段 " , width : "90", sortable:true, headAlign:'center', align :'center'},
+#if ($view == 'history' || $view == 'all')	
+	{ id : 'CLOSE_TIME2' , header : "状态 ", width:"62", sortable:false, headAlign:'center', align :'center',  renderer : closeTimeRender},
+#end	
+#end	
+	
+#end
+
+#foreach($extField in $extendQuery.fields)
+#if (!$extField.option.size() && "$extField.width" != "0")
+	{ id : '$extField.id' , header : "$extField.name " , emptyText:"", width : "$extField.width", headAlign:'center',  align :'$extField.align'}, 
+#else
+#set ($optionMap = "")
+#foreach($keyvalue in $extField.option)
+	#set ($optionMap = $optionMap + $keyvalue.FKEY +":"+ $keyvalue.FVALUE + ",")
+#end
+#if ("$extField.width" != "0")
+	{ id : '$extField.id' , header : "$extField.name ", width : "$extField.width", headAlign:'center',  align :'$extField.align', renderer: render_$extField.id , options : '$optionMap'},
+#end
+#end
+#end
+
+	{id:'',header:'',width:'',hidden:'true'}
+];		
+
+#foreach($extField in $extendQuery.fields)
+#if ($extField.option.size())
+function render_${extField.id}(value, record , cell, grid, colNO, rowNO) {
+	if (value == null || value<0 ) return '';
+	var val = ${extField.id}_options[value];
+	if (val) return val;
+	else return value;
+}
+#end
+#end
+
+gridConfigDim[GTGridCountInPage] = {
+	id : "jbpmGrid",	
+	dataset : dsConfigDim[GTGridCountInPage] ,
+	columns : colsConfigDim[GTGridCountInPage] ,
+	container : 'containerjbpmGrid', 
+	toolbarPosition : 'bottom',
+	toolbarContent : 'nav | goto | pagesize | reload | filter mybutton $dynamicBtn | state' ,
+	selectRowByCheck: false,
+	onClickCell: rowSelected,
+	onDblClickCell: cellDblClick,
+	autoLoad: true,
+	showIndexColumn: true,
+	loadResponseHandler : myResponseHandler, 
+	pageSize : 20 ,	
+	pageSizeList : [5,10,15,20],	
+#if ($view == "history")
+	loadURL: "/$module/ccftag/pojo/bean://com.suntek.jbpm.mgmt.WorkItemListHisQuery:getData",
+#else	
+	loadURL: "/$module/ccftag/pojo/bean://com.suntek.jbpm.mgmt.WorkItemListQuery:getData",
+#end		
+	remotePaging: true,
+	parameters: {DataSourceName:"",userId:'$user',transition:'${transition}',processName:'${processName}',view:'$view',uniqueField:'${uniqueField}',tableName:'${tableName}' ,SQL:"${SQL}"}
+};
+
+Sigma.ToolFactroy.register('mybutton', {cls : 'exportBtn-cls', toolTip : '导出excel表格', action : exportXls });   
+
+</script> 
+
+<!-- grid的容器. -->
+<div id="containerjbpmGrid" style="width:100%; height:100%; overflow-y:hidden"></div>
+
+<script>
+
+var jbpmGrid = new Sigma.Grid( gridConfigDim[GTGridCountInPage] );
+$(document).ready(function() {	
+	jbpmGrid. render();
+	
+	$(window).bind("resize", function() {			
+		var w = $("#containerjbpmGrid").width();
+		var h = $("#containerjbpmGrid").height()		
+		if (jbpmGrid.width != w || jbpmGrid.height != h) {
+			jbpmGrid.setSize(w, h);	
+		}
+	});
+})  
+
+/**
+ * 自动选中Render方法设置的checked状态的行 
+ * render 方法里面还未初始化表格，所以放在 grid 的 complete 事件处理
+ */
+jbpmGrid. onComplete = function(grid) { 		
+	var checklist = GRID_SELECTED_ROWIDX.split(",");
+	for (var i=0; i<checklist.length; i++)
+    	grid.selectRowByIdx(checklist[i]); 
+    GRID_SELECTED_ROWIDX = "";     
+}
+</script> 
+
+</DIV>
+</TD>
+</TR>
+</table>
+
+<script>
+$(document).ready(function() {
+	$("#queryformDiv").drag();
+	document.getElementById('queryformDiv').style.left = (document.body.clientWidth - 450)/2;        
+});
+</script>	
+</body>

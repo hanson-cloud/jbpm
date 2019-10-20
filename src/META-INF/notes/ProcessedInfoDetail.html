@@ -1,0 +1,96 @@
+
+<html>
+<head>
+     <title></title>
+     <meta http-equiv="Content-Type" content="text/html; charset=GBK" />
+</head>
+
+<style>
+	.spanrow {background-image: url(/jbpm/images/spanrow.gif); height:22px; text-align:center}	
+</style>
+
+<script type="text/javascript" src="/eaptag2/js/ccftag.zdialog.js" ></script>	
+<script type="text/javascript" src="/eaptag2/js/ccftag.form.js"></script>
+
+<script>
+
+function toFormPage(bizId, instId, taskId, taskName) {
+	var dlg = new Dialog("OuterFrameDialog");
+	dlg.Width = document.body.clientWidth * 0.9;
+	dlg.Height = document.body.clientHeight * 0.9;
+	dlg.Title = "查看处理表单";
+	dlg.URL = "/$module/jbpm?action=GetTaskNodeForm&processName=${processName}&BIZ_ID=" + bizId + "&INST_ID=" + instId + 
+			  "&TASK_NAME=" + taskName + "&TASK_ID=" + taskId + "&readonly=true&queryByTaskId=true&history=${history}";
+	dlg.ShowMessageRow = false;
+	dlg.ShowButtonRow = false;		 
+	dlg.show();
+}	
+
+function toPlayCallRecord(callId) {
+	var dlg = new Dialog("OuterFrameDialog");
+	dlg.Width = 650;
+	dlg.Height = 350;
+	dlg.Title = "听取外呼录音";
+	dlg.URL = "${playCallRecordURL}?CallId=" + callId;
+	dlg.ShowMessageRow = false;
+	dlg.ShowButtonRow = false;		 
+	dlg.show();
+}
+
+$(document).ready(function(){
+	document.getElementById("detail").height = document.body.clientHeight - 35;
+});
+
+</script>	
+<body width="100%" style="padding: 2px; background-color:648BC1; overflow-y:auto"> 
+	<div style="background-color:EEEEEE; padding-top:10px; height:30px; width:100%; text-align:right" id="description">图例说明：
+		<img src="/jbpm/images/Forward.png" style="vertical-align:middle"/>处理步骤&nbsp;&nbsp;
+		<img src="/jbpm/images/invite.png" style="vertical-align:middle"/>附加意见&nbsp;&nbsp;
+		<img src="/jbpm/images/callOut.png" style="vertical-align:top"/>关联录音&nbsp;&nbsp;		  
+	</div>
+	<table width="100%" height="90%" align="center" id="detail" cellspacing="1" cellpadding="2" bgcolor="#CCCCCC">		
+        <tr width="100%" height="20" bgcolor="eeeeee" style="font-weight:bold">
+        	<td width="20" align=center class="spanrow">...</td>
+        	<td width="20" align=center class="spanrow">...</td>
+         	<td width="100" align=center class="spanrow">任务名称</td>
+         	<td width="150" align=center class="spanrow">发送部门</td>
+         	<td width="120" align=center class="spanrow">发送人</td>		
+         	<td width="120" align=center class="spanrow">发送时间</td>
+         	<td id="topicTR" width="*" align=center class="spanrow">标题</td>	         		
+        </tr>
+        <script>$("#topicTR").css("width", document.body.clientWidth - 450)</script>
+#foreach($row in $recordlist)          
+        <tr width="100%" height="20" bgcolor="FFFFFF">
+#if($row.FLAG == '2')
+        	<td width="20" align=center><img src="/jbpm/images/invite.png"/></td>
+#if($row.CALL_ID != '')
+        	<td width="20" align=center><img src="/jbpm/images/callOut.png" onclick="toPlayCallRecord('$row.CALL_ID')" style="cursor:hand" title="点击听取录音"/></td>
+#else
+			<td width="20" align=center></td>        	
+#end
+        	<td width="100" align=center>$row.TASK_NAME</td>        	
+#else
+			<td width="20" align=center><img src="/jbpm/images/Forward.png"/></td>
+#if($row.CALL_ID != '')
+        	<td width="20" align=center><img src="/jbpm/images/callOut.png" onclick="toPlayCallRecord('$row.CALL_ID')" style="cursor:hand" title="点击听取录音"/></td>
+#else
+			<td width="20" align=center></td>        	
+#end
+			<td width="80" align=center ><a href="javascript:toFormPage('$row.BIZ_ID','$row.INST_ID','$row.TASK_ID','$row.TASK_NAME')" title="点击查看本次处理表单信息">$row.TASK_NAME</a></td>
+#end
+         	<td width="150" align=center >$row.DEAL_DEPT</td>
+         	<td width="120" align=center >$row.DEAL_UNAME</td>		
+         	<td width="120" align=center >$row.DEAL_TIME</td> 
+         	<td id="topicTR" width="*" align=left style="word-break:break-all">
+         		<script type="text/javascript">
+         		var assignMemo = ("$row.ASSIGN_MEMO").replace("/n","<br/>");
+         		document.writeln(assignMemo);
+         		</script>
+         	</td>	         		
+        </tr>        
+#end        
+		<tr bgcolor="ffffff"><td colspan="7" height="*">&nbsp;</td></tr>
+	    
+	</table>
+</body>
+</html>

@@ -1,0 +1,50 @@
+
+<html>
+<head>
+     <title></title>
+     <meta http-equiv="Content-Type" content="text/html; charset=GBK" />
+</head>
+
+<script type="text/javascript" src="/eaptag2/js/ccftag.form.js"></script>
+<script type="text/javascript" src="/eaptag2/js/ccftag.textbox.js"></script>
+<script type="text/javascript" src="/eaptag2/js/ccftag.jbpm.js"></script>
+
+<style>
+.passednode {
+	border: 2px solid blue;
+}
+.todonode {
+	border: 2px solid red;
+}
+</style>
+
+<body style="margin:0px" scroll=no>
+
+<center>
+	<br><br>
+	<form name="myForm">
+	<span style="width:560px; text-align:left">请填写意见:</span><br>
+	<textarea name="defaultTaskMemo" cols="80" rows="6"></textarea>
+	<br><br>
+<script>
+	MODULE_NAME = '$module'; 
+	PROCESS_NAME = '$processName'; 
+	INSTANCE_ID = '$instanceId'; 
+	TASK_ID = '$taskId'; 
+	BIZ_ID = '$bizId';
+	FORM_READONLY = '$readonly'; 
+	DUE_TIME = '$dueTime';  
+#if($mainFormData != '')	
+	MAINFORM_DATA = $mainFormData;
+#end	
+</script>
+#if($readonly != 'true')
+<button class="submitbtn" onclick="saveForm('')">保存</button>&nbsp;&nbsp;
+<button class="submitbtn" onclick="submitForm('')">发送</button>
+#end
+	</form>
+</center>
+
+</body>
+
+</html>

@@ -1,0 +1,125 @@
+<html>
+<head>
+
+<title>工单浏览</title>
+
+<script type="text/javascript" src="/eaptag2/js/ccftag.zdialog.js" ></script>
+
+<script src="/eaptag2/js/ccftag.form.js" type="text/javascript"></script>
+<link rel="stylesheet" href="/eaptag2/css/ui.tabs2.css" type="text/css" />
+
+</head> 
+
+<script>
+var selectedTabId = "tab1";
+var taburl = {};
+var tasknames = new Array();
+var prevIdx = 1;
+function toggleTabStyle(tabId, idx) {
+	$("#" + selectedTabId).removeClass("ui-tabs-selected");
+	$("#" + tabId).addClass("ui-tabs-selected");
+	selectedTabId = tabId;
+	if ($("#DetailFrame_" + idx).attr('src')=="") {		
+		$("#DetailFrame_" + idx).attr('src', taburl[idx]);	
+	}
+	$("#worksheetTab-" + prevIdx).hide();
+	$("#worksheetTab-" + idx).show();
+	prevIdx = idx;
+}
+function selectTab(taskname) {	
+	for(i=0; i<tasknames.length; i++) {	
+		if (tasknames[i+1] == taskname) {
+			$("#tab"+(i+1)+" span").click();
+		}
+	} 
+}
+</script>
+
+<body style="margin:0px;" scroll=no> 
+	<DIV class="ui-tabs-nav" id="tabframe">
+#set($i = 1)          					
+#foreach($task in $taskList)  	
+<script>
+#if($task.TASK_NAME==$currentTask.TASK_NAME)
+	taburl[$i] = "/jbpm/jsp/simple/WorkSheetOuterFrame.jsp?module=$module&processName=$processName&TASK_NAME=$currentTask.TASK_NAME&currentTaskName=$currentTask.TASK_NAME&INST_ID=$currentTask.INST_ID&TASK_ID=$currentTask.TASK_ID&readonly=${readonly}&history=$history&BIZ_ID=$currentTask.BIZ_ID&view=$view&dueTime=$dueTime";	
+#else
+	taburl[$i] = "/jbpm/jsp/simple/WorkSheetOuterFrame.jsp?module=$module&processName=$processName&TASK_NAME=$task.TASK_NAME&currentTaskName=$currentTask.TASK_NAME&INST_ID=$task.INST_ID&TASK_ID=$task.TASK_ID&readonly=true&history=$history&BIZ_ID=$task.BIZ_ID&view=$view&dueTime=$dueTime";
+#end
+	tasknames[$i] = "$task.TASK_NAME";
+</script>
+#if($task.TASK_NAME==$currentTask.TASK_NAME)
+		<li id="tab$i" class="ui-tabs-selected"><a href="javascript:toggleTabStyle('tab$i', $i)"><span> $task.TASK_NAME </span></a></li>
+#else
+		<li id="tab$i"><a href="javascript:toggleTabStyle('tab$i', $i)"><span> $task.TASK_NAME </span></a></li>
+#end		
+#set($i = $i + 1)			
+#end	
+
+#foreach($link in $linkPages)
+#set($i = $i + 1)	
+#if($link.url.indexOf("?")>0)
+<script>taburl[$i] = "$link.url&BIZ_ID=$currentTask.BIZ_ID&${queryString}";</script>
+#else
+<script>taburl[$i] = "$link.url?BIZ_ID=$currentTask.BIZ_ID&${queryString}";</script>
+#end
+		<li id="tab$i"><a href="javascript:toggleTabStyle('tab$i', $i)"><span> $link.name </span></a></li>	
+#end
+
+#set($i = $i + 1)		
+<script>taburl[$i] = "/$module/jbpm/FlowChart.html?processName=$processName&INST_ID=$INST_ID&TASK_ID=$TASK_ID&history=$history";</script>
+		<li id="tab$i"><a href="javascript:toggleTabStyle('tab$i', $i)"><span> 流程图 </span></a></li>	
+		
+	</div>
+	 
+	
+		
+	<div class="cline1" id="tabFrame" style="padding-top:4px; height:100%; width:100% ">
+#set($i = 1) 	
+#foreach($task in $taskList)
+#if($task.TASK_NAME==$currentTask.TASK_NAME)
+		<div id="worksheetTab-$i" class="ui-tabs-selected" style='display:block;'>			
+			<iframe src="" width="100%" height="100%" id="DetailFrame_$i" frameborder="0"></iframe>
+		</div>
+		<script>
+			$("#DetailFrame_$i").attr("src", taburl[$i]);
+			selectedTabId = "tab$i";
+			prevIdx = $i;
+		</script>
+#else
+		<div id="worksheetTab-$i" class="ui-tabs-selected" style='display:none;'>			
+			<iframe src="" width="100%" height="100%" id="DetailFrame_$i" frameborder="0"></iframe>
+		</div>
+#end		
+#set($i = $i + 1)
+#end		
+
+#set($i = $i + 1)	
+	
+#foreach($task in $linkPages)		
+		<div id="worksheetTab-$i" class="ui-tabs-selected" style='display:none;'>			
+			<iframe src="" width="100%" height="100%" id="DetailFrame_$i" frameborder="0"></iframe>
+		</div>
+#set($i = $i + 1)		
+#end
+
+
+		<div id="worksheetTab-$i" class="ui-tabs-selected" style='display:none;'>			
+			<iframe src="" width="100%" height="100%" id="DetailFrame_$i" frameborder="0"></iframe>
+		</div>
+#set($i = $i + 1)		
+		<div id="worksheetTab-$i" class="ui-tabs-selected" style='display:none;'>			
+			<iframe src="" width="100%" height="100%" id="DetailFrame_$i" frameborder="0"></iframe>
+		</div>
+				
+	</div>
+	<script type="text/javascript">
+   		$(document).ready(function(){ 
+   			tabFrame.style.height = document.body.clientHeight - 26;
+   			tabFrame.style.width = document.body.clientWidth - 0;
+   		});
+   	</script>
+	
+
+</body>
+
+</html>
